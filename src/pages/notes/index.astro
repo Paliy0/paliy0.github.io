@@ -1,0 +1,31 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import NoteCard from '../../components/NoteCard.astro';
+
+const allNotes = await getCollection('notes', ({ data }) => {
+  return data.draft !== true;
+});
+
+// Sort alphabetically by title
+const sortedNotes = allNotes.sort((a, b) => {
+  return a.data.title.localeCompare(b.data.title);
+});
+---
+
+<Layout title="All Notes" description="Browse all notes in the garden">
+	<div class="max-w-4xl mx-auto">
+		<header class="mb-8 sm:mb-12">
+			<h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 text-[var(--color-text-heading)] dark:text-[var(--color-text-heading)]">All Notes</h1>
+			<p class="text-[var(--color-text-body)] dark:text-[var(--color-text-muted)]">
+				{sortedNotes.length} note{sortedNotes.length !== 1 ? 's' : ''} in the garden
+			</p>
+		</header>
+
+		<div class="grid gap-3 sm:gap-4 md:grid-cols-2">
+			{sortedNotes.map((note) => (
+				<NoteCard note={note} variant="grid" headingLevel="h2" showDate={false} />
+			))}
+		</div>
+	</div>
+</Layout>

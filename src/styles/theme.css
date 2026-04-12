@@ -1,0 +1,101 @@
+/* Theme Configuration - Centralized color palette with semantic naming */
+
+/* ============================================
+   NEON ACCENT COLORS
+   ============================================ */
+:root {
+  --color-accent-teal: #2a9d8f;
+  --color-accent-teal-light: #3dd4c3;
+  --color-accent-teal-dark: #1d7066;
+  --color-accent-teal-glow: rgba(42, 157, 143, 0.4);
+
+  --color-accent-coral: #e76f51;
+  --color-accent-coral-light: #f4a261;
+  --color-accent-coral-dark: #c45a3f;
+  --color-accent-coral-glow: rgba(231, 111, 81, 0.4);
+}
+
+/* ============================================
+   LIGHT MODE THEME
+   ============================================ */
+:root {
+  /* Background / Surface Colors */
+  --color-surface-base: #fafafa;
+  --color-surface-elevated: #f0f0f5;
+  --color-surface-floating: #ffffff;
+  
+  /* Border Colors */
+  --color-border-subtle: #e0e0e8;
+  --color-border-default: #d0d0d8;
+  
+  /* Text Colors */
+  --color-text-heading: #1a1a2e;
+  --color-text-body: #4a4a5a;
+  --color-text-muted: #6a6a7a;
+  --color-text-placeholder: #808090;
+  
+  /* Interactive Colors */
+  --color-interactive: var(--color-accent-teal);
+  --color-interactive-hover: var(--color-accent-teal-dark);
+  --color-interactive-light: var(--color-accent-teal-light);
+}
+
+/* ============================================
+   DARK MODE THEME
+   ============================================ */
+.dark {
+  /* Background / Surface Colors */
+  --color-surface-base: #0a0a0f;
+  --color-surface-elevated: #12121a;
+  --color-surface-floating: #1a1a25;
+  
+  /* Border Colors */
+  --color-border-subtle: #2a2a3a;
+  --color-border-default: #3a3a4a;
+  
+  /* Text Colors */
+  --color-text-heading: #FAF9F6;
+  --color-text-body: #e0e0e8;
+  --color-text-muted: #a0a0b0;
+  --color-text-placeholder: #808090;
+  
+  /* Interactive Colors */
+  --color-interactive: var(--color-accent-teal-light);
+  --color-interactive-hover: var(--color-accent-teal);
+  --color-interactive-light: var(--color-accent-teal);
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+.text-heading {
+  color: var(--color-text-heading);
+}
+
+.text-body {
+  color: var(--color-text-body);
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+.bg-surface-base {
+  background-color: var(--color-surface-base);
+}
+
+.bg-surface-elevated {
+  background-color: var(--color-surface-elevated);
+}
+
+.bg-surface-floating {
+  background-color: var(--color-surface-floating);
+}
+
+.border-subtle {
+  border-color: var(--color-border-subtle);
+}
+
+.border-default {
+  border-color: var(--color-border-default);
+}

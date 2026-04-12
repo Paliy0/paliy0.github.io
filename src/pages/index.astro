@@ -1,0 +1,47 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../layouts/Layout.astro';
+import NoteCard from '../components/NoteCard.astro';
+
+const allNotes = await getCollection('notes', ({ data }) => {
+  return data.draft !== true;
+});
+
+// Sort by date, newest first
+const sortedNotes = allNotes.sort((a, b) => {
+  const dateA = a.data.date ? new Date(a.data.date).getTime() : 0;
+  const dateB = b.data.date ? new Date(b.data.date).getTime() : 0;
+  return dateB - dateA;
+});
+---
+
+<Layout>
+	<div class="max-w-2xl mx-auto">
+		<header class="mb-8 sm:mb-12 text-center">
+			<h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-[var(--color-text-heading)] dark:text-[var(--color-text-heading)]">
+				<span class="text-[var(--color-accent)]">❯</span> Digital Garden
+			</h1>
+			<p class="text-xl text-[var(--color-text-body)] dark:text-[var(--color-text-muted)]">
+				A growing collection of notes, ideas, and half-formed thoughts.
+			</p>
+		</header>
+
+		<section>
+			<div class="flex items-center justify-between mb-6">
+				<h2 class="text-2xl font-semibold text-[var(--color-text-heading)] dark:text-[var(--color-text-heading)]">Latest Notes</h2>
+			</div>
+			
+			<div class="space-y-6" id="notes-list">
+				{sortedNotes.length === 0 ? (
+					<p class="text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)] text-center py-12">
+						No notes published yet. Start writing in your Obsidian vault!
+					</p>
+				) : (
+					sortedNotes.map((note) => (
+						<NoteCard note={note} variant="default" headingLevel="h3" />
+					))
+				)}
+			</div>
+		</section>
+	</div>
+</Layout>

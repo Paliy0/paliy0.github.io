@@ -1,0 +1,65 @@
+---
+interface Props {
+  headings: { depth: number; slug: string; text: string }[];
+}
+
+const { headings } = Astro.props;
+
+// Filter to only H2 and H3 headings
+const tocHeadings = headings.filter(h => h.depth >= 2 && h.depth <= 3);
+---
+
+{tocHeadings.length > 2 && (
+  <nav class="toc hidden xl:block w-64 shrink-0">
+    <div class="sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto">
+      <h3 class="text-sm font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)] uppercase tracking-wider mb-3">
+        On this page
+      </h3>
+      <ul class="space-y-1 border-l border-[var(--color-border-subtle)] dark:border-[var(--color-border-subtle)]">
+        {tocHeadings.map((heading) => (
+          <li class={heading.depth === 3 ? 'ml-4' : ''}>
+            <a
+              href={`#${heading.slug}`}
+              class="block py-1 pl-4 -ml-px text-sm text-[var(--color-text-body)] dark:text-[var(--color-text-muted)] hover:text-[var(--color-accent)] dark:hover:text-[var(--color-accent)] transition-all border-l-2 border-transparent hover:border-[var(--color-accent-teal)] dark:hover:border-[var(--color-accent-teal-light)]"
+              data-heading={heading.slug}
+            >
+              {heading.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </nav>
+)}
+
+<script>
+  // Highlight current section in TOC
+  const observerOptions = {
+    root: null,
+    rootMargin: '-20% 0px -80% 0px',
+    threshold: 0
+  };
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const link = document.querySelector(`[data-heading="${entry.target.id}"]`);
+      if (link) {
+        if (entry.isIntersecting) {
+          // Remove active from all links
+          document.querySelectorAll('[data-heading]').forEach(l => {
+            l.classList.remove('border-l-2', 'border-[var(--color-accent-teal)]', 'dark:border-[var(--color-accent-teal-light)]', 'text-[var(--color-accent)]', 'dark:text-[var(--color-accent)]', 'font-medium');
+            l.classList.add('text-[var(--color-text-body)]', 'dark:text-[var(--color-text-muted)]', 'border-transparent');
+          });
+          // Add active to current
+          link.classList.add('border-l-2', 'border-[var(--color-accent-teal)]', 'dark:border-[var(--color-accent-teal-light)]', 'text-[var(--color-accent)]', 'dark:text-[var(--color-accent)]', 'font-medium');
+          link.classList.remove('text-[var(--color-text-body)]', 'dark:text-[var(--color-text-muted)]', 'border-transparent');
+        }
+      }
+    });
+  }, observerOptions);
+
+  // Observe all heading elements
+  document.querySelectorAll('h2[id], h3[id]').forEach(heading => {
+    observer.observe(heading);
+  });
+</script>

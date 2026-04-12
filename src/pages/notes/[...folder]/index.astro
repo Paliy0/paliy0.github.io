@@ -1,0 +1,135 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../../layouts/Layout.astro';
+import NoteCard from '../../../components/NoteCard.astro';
+import Breadcrumbs, { generateFolderBreadcrumbs } from '../../../components/Breadcrumbs.astro';
+
+export async function getStaticPaths() {
+  const notes = await getCollection('notes', ({ data }) => !data.draft);
+  
+  // Get all unique folder paths
+  const folders = new Set<string>();
+  notes.forEach((note) => {
+    const parts = note.id.split('/');
+    parts.pop(); // Remove filename
+    if (parts.length > 0) {
+      // Add all parent folders
+      let path = '';
+      for (const part of parts) {
+        path = path ? `${path}/${part}` : part;
+        folders.add(path);
+      }
+    }
+  });
+  
+  return Array.from(folders).map((folder) => ({
+    params: { folder },
+    props: { folder },
+  }));
+}
+
+const { folder } = Astro.props;
+
+// Get notes in this folder (not in subfolders)
+const allNotes = await getCollection('notes', ({ data }) => !data.draft);
+const folderNotes = allNotes.filter((note) => {
+  const noteFolder = note.id.split('/').slice(0, -1).join('/');
+  return noteFolder === folder;
+});
+
+// Get subfolders
+const subfolders = new Set<string>();
+allNotes.forEach((note) => {
+  const parts = note.id.split('/');
+  parts.pop(); // Remove filename
+  const noteFolder = parts.join('/');
+  
+  // Check if this note is in a subfolder of current folder
+  if (noteFolder.startsWith(folder + '/')) {
+    const remainingPath = noteFolder.slice(folder.length + 1);
+    const subfolder = remainingPath.split('/')[0];
+    if (subfolder) {
+      subfolders.add(subfolder);
+    }
+  }
+});
+
+const sortedSubfolders = Array.from(subfolders).sort();
+
+// Sort notes by date (newest first), then by title
+const sortedNotes = folderNotes.sort((a, b) => {
+  const dateA = a.data.date ? new Date(a.data.date).getTime() : 0;
+  const dateB = b.data.date ? new Date(b.data.date).getTime() : 0;
+  if (dateB !== dateA) return dateB - dateA;
+  return a.data.title.localeCompare(b.data.title);
+});
+
+// Format folder name for display
+const folderParts = folder.split('/');
+const folderName = folderParts[folderParts.length - 1];
+const displayName = folderName.replace(/-/g, ' ');
+
+// Generate breadcrumbs
+const breadcrumbs = generateFolderBreadcrumbs(folder);
+---
+
+<Layout title={`${displayName} - Digital Garden`} description={`Notes in ${displayName}`}>
+  <div class="max-w-4xl mx-auto">
+    <!-- Breadcrumbs -->
+    <Breadcrumbs items={breadcrumbs} class="mb-4" />
+
+    <header class="mb-8">
+      <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-text-heading)] dark:text-[var(--color-text-heading)] mb-2 flex items-center gap-3 capitalize">
+        <svg class="w-8 h-8 text-[var(--color-accent)]" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+        </svg>
+        {displayName}
+      </h1>
+      <p class="text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]">
+        {sortedNotes.length} note{sortedNotes.length !== 1 ? 's' : ''}
+        {sortedSubfolders.length > 0 && ` • ${sortedSubfolders.length} subfolder${sortedSubfolders.length !== 1 ? 's' : ''}`}
+      </p>
+    </header>
+
+    <!-- Subfolders -->
+    {sortedSubfolders.length > 0 && (
+      <section class="mb-8">
+        <h2 class="text-lg font-semibold text-[var(--color-text-heading)] dark:text-[var(--color-text-heading)] mb-4">Subfolders</h2>
+        <div class="grid gap-3 sm:grid-cols-2">
+          {sortedSubfolders.map((subfolder) => (
+            <a 
+              href={`/notes/${folder}/${subfolder}`}
+              class="flex items-center gap-3 p-4 bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] rounded-lg hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)] transition-colors group"
+            >
+              <svg class="w-6 h-6 text-[var(--color-accent)]" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+              </svg>
+              <span class="font-medium text-[var(--color-text-heading)] dark:text-[var(--color-text-heading)] group-hover:text-[var(--color-accent)] dark:group-hover:text-[var(--color-accent)] transition-colors capitalize">
+                {subfolder.replace(/-/g, ' ')}
+              </span>
+              <svg class="w-4 h-4 text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)] ml-auto" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+              </svg>
+            </a>
+          ))}
+        </div>
+      </section>
+    )}
+
+    <!-- Notes -->
+    <section>
+      <h2 class="text-lg font-semibold text-[var(--color-text-heading)] dark:text-[var(--color-text-heading)] mb-4">Notes</h2>
+      {sortedNotes.length === 0 ? (
+        <p class="text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)] text-center py-12 bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] rounded-lg">
+          No notes in this folder yet.
+        </p>
+      ) : (
+        <div class="space-y-6">
+          {sortedNotes.map((note) => (
+            <NoteCard note={note} variant="default" headingLevel="h3" />
+          ))}
+        </div>
+      )}
+    </section>
+  </div>
+</Layout>

@@ -1,0 +1,229 @@
+---
+import { getCollection } from 'astro:content';
+import { slugifyStr } from '../utils/slugify';
+
+const notes = await getCollection('notes', ({ data }) => !data.draft);
+
+const searchIndex = notes.map(note => ({
+  slug: note.id.replace(/\.md$/, ''),
+  title: note.data.title,
+  description: note.data.description || '',
+  content: note.body || '',
+  tags: note.data.tags || [],
+  transitionName: slugifyStr(note.data.title)
+}));
+---
+
+<script is:inline define:vars={{ searchIndex }}>
+  window.searchIndex = searchIndex;
+</script>
+
+<!-- Search Modal -->
+<div 
+  id="search-modal" 
+  class="fixed inset-0 z-[60] hidden"
+  role="dialog"
+  aria-modal="true"
+>
+  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" id="search-backdrop"></div>
+  
+  <div class="absolute top-20 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4">
+    <div class="bg-[var(--color-surface-floating)] dark:bg-[var(--color-surface-base)] rounded-xl shadow-2xl overflow-hidden border border-[var(--color-border-subtle)] dark:border-[var(--color-border-subtle)]">
+      <div class="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border-subtle)] dark:border-[var(--color-border-subtle)]">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.3-4.3"></path>
+        </svg>
+        <input 
+          type="text" 
+          id="search-input"
+          placeholder="Search notes..."
+          class="flex-1 bg-transparent outline-none text-[var(--color-text-heading)] dark:text-[var(--color-text-body)] placeholder-[var(--color-text-muted)] dark:placeholder-[var(--color-text-placeholder)]"
+          autocomplete="off"
+        >
+        <kbd class="px-2 py-1 text-xs bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)] rounded">ESC</kbd>
+      </div>
+      
+      <div id="search-results" class="max-h-96 overflow-y-auto">
+        <div class="p-8 text-center text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]">
+          Type to search notes...
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import Fuse from 'fuse.js';
+  
+  let fuse;
+  
+  function getElements() {
+    return {
+      searchModal: document.getElementById('search-modal'),
+      searchBackdrop: document.getElementById('search-backdrop'),
+      searchInput: document.getElementById('search-input'),
+      searchResults: document.getElementById('search-results'),
+      searchTriggerMobile: document.getElementById('search-trigger-mobile'),
+      searchTriggerDesktop: document.getElementById('search-trigger-desktop'),
+    };
+  }
+  
+  function initSearch() {
+    if (!fuse && window.searchIndex) {
+      fuse = new Fuse(window.searchIndex, {
+        keys: ['title', 'description', 'content', 'tags'],
+        threshold: 0.2,
+        minMatchCharLength: 3,
+        includeScore: true,
+        includeMatches: true,
+      });
+    }
+  }
+  
+  function openSearch() {
+    initSearch();
+    const { searchModal, searchInput } = getElements();
+    if (searchModal) {
+      searchModal.classList.remove('hidden');
+    }
+    if (searchInput) {
+      searchInput.focus();
+    }
+    document.body.style.overflow = 'hidden';
+  }
+  
+  function closeSearch() {
+    const { searchModal, searchInput, searchResults } = getElements();
+    if (searchModal) {
+      searchModal.classList.add('hidden');
+    }
+    if (searchInput) {
+      (searchInput as HTMLInputElement).value = '';
+    }
+    if (searchResults) {
+      searchResults.innerHTML = '<div class="p-8 text-center text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]">Type to search notes...</div>';
+    }
+    document.body.style.overflow = '';
+  }
+  
+  function highlightMatch(text, matches) {
+    if (!matches || matches.length === 0) return text;
+    
+    let result = text;
+    const indices = matches[0].indices;
+    
+    // Sort indices in reverse order to replace from end to start
+    const sortedIndices = [...indices].sort((a, b) => b[0] - a[0]);
+    
+    for (const [start, end] of sortedIndices.slice(0, 3)) {
+      const before = result.slice(0, start);
+      const match = result.slice(start, end + 1);
+      const after = result.slice(end + 1);
+      result = before + '<mark class="bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] text-[var(--color-accent)] dark:text-[var(--color-accent)]">' + match + '</mark>' + after;
+    }
+    
+    return result;
+  }
+  
+  function renderResults(results) {
+    const { searchResults } = getElements();
+    if (!searchResults) return;
+    
+    if (results.length === 0) {
+      searchResults.innerHTML = '<div class="p-8 text-center text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]">No results found</div>';
+      return;
+    }
+    
+    const html = results.slice(0, 10).map(result => {
+      const note = result.item;
+      const titleMatch = result.matches?.find(m => m.key === 'title');
+      const descMatch = result.matches?.find(m => m.key === 'description');
+      const contentMatch = result.matches?.find(m => m.key === 'content');
+      
+      const title = highlightMatch(note.title, titleMatch ? [titleMatch] : []);
+      const description = note.description 
+        ? highlightMatch(note.description.slice(0, 150), descMatch ? [descMatch] : [])
+        : (contentMatch 
+            ? '...' + highlightMatch(note.content.slice(contentMatch.indices[0][0], contentMatch.indices[0][0] + 100), [contentMatch]) + '...'
+            : note.content.slice(0, 150) + '...');
+      
+      return `
+        <a href="/notes/${note.slug}" class="block p-4 hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)] transition-colors border-b border-[var(--color-border-subtle)] dark:border-[var(--color-border-subtle)] last:border-0">
+          <h3 class="font-semibold text-[var(--color-text-heading)] dark:text-[var(--color-text-body)] mb-1" style="view-transition-name: ${note.transitionName}">${title}</h3>
+          <p class="text-sm text-[var(--color-text-body)] dark:text-[var(--color-text-muted)] line-clamp-2">${description}</p>
+          ${note.tags.length > 0 ? `
+            <div class="flex gap-2 mt-2">
+              ${note.tags.slice(0, 3).map(tag => `<span class="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]">#${tag}</span>`).join('')}
+            </div>
+          ` : ''}
+        </a>
+      `;
+    }).join('');
+    
+    searchResults.innerHTML = html;
+  }
+  
+  // Use event delegation for search triggers
+  document.addEventListener('click', (e) => {
+    const searchTriggerMobile = document.getElementById('search-trigger-mobile');
+    const searchTriggerDesktop = document.getElementById('search-trigger-desktop');
+    const searchBackdrop = document.getElementById('search-backdrop');
+    
+    // Check if click was on search trigger
+    if ((searchTriggerMobile && (e.target === searchTriggerMobile || searchTriggerMobile.contains(e.target as Node))) ||
+        (searchTriggerDesktop && (e.target === searchTriggerDesktop || searchTriggerDesktop.contains(e.target as Node)))) {
+      e.preventDefault();
+      openSearch();
+    }
+    
+    // Check if click was on backdrop
+    if (searchBackdrop && (e.target === searchBackdrop || searchBackdrop.contains(e.target as Node))) {
+      closeSearch();
+    }
+  });
+  
+  // Input handler - re-attach after each view transition since input element is recreated
+  function attachInputListener() {
+    const searchInput = document.getElementById('search-input');
+    
+    // Remove any existing listener to prevent duplicates
+    searchInput?.removeEventListener('input', handleInput);
+    searchInput?.addEventListener('input', handleInput);
+  }
+  
+  function handleInput(e) {
+    const query = e.target.value.trim();
+    const searchResults = document.getElementById('search-results');
+    if (!query) {
+      if (searchResults) {
+        searchResults.innerHTML = '<div class="p-8 text-center text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]">Type to search notes...</div>';
+      }
+      return;
+    }
+    
+    if (fuse) {
+      const results = fuse.search(query);
+      renderResults(results);
+    }
+  }
+  
+  // Initial setup
+  attachInputListener();
+  
+  // Re-attach input listener after each view transition
+  document.addEventListener('astro:page-load', attachInputListener);
+  
+  // Global keyboard handler (doesn't need re-attaching)
+  document.addEventListener('keydown', (e) => {
+    // Cmd/Ctrl + K to open
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      openSearch();
+    }
+    // ESC to close
+    if (e.key === 'Escape') {
+      closeSearch();
+    }
+  });
+</script>

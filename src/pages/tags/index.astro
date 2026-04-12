@@ -1,0 +1,42 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+
+const notes = await getCollection('notes', ({ data }) => !data.draft);
+
+// Collect all tags and count occurrences
+const tagCounts = new Map<string, number>();
+notes.forEach(note => {
+  note.data.tags?.forEach((tag: string) => {
+    tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+  });
+});
+
+// Sort tags by count (most used first)
+const sortedTags = Array.from(tagCounts.entries())
+  .sort((a, b) => b[1] - a[1]);
+---
+
+<Layout title="All Tags - Digital Garden" description="Browse notes by tag">
+	<div class="max-w-4xl mx-auto">
+		<header class="mb-8 sm:mb-12">
+			<h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 text-[var(--color-text-heading)] dark:text-[var(--color-text-heading)]">All Tags</h1>
+			<p class="text-[var(--color-text-body)] dark:text-[var(--color-text-muted)]">
+				{sortedTags.length} tag{sortedTags.length !== 1 ? 's' : ''} across {notes.length} notes
+			</p>
+		</header>
+
+		<div class="flex flex-wrap gap-3">
+			{sortedTags.map(([tag, count]) => (
+				<a 
+					href={`/tags/${tag}`}
+					class="group flex items-center gap-2 px-4 py-2 bg-[var(--color-surface-floating)] dark:bg-[var(--color-surface-elevated)] rounded-lg border border-[var(--color-border-subtle)] dark:border-[var(--color-border-subtle)] hover:border-[var(--color-accent-teal)] dark:hover:border-[var(--color-accent-teal-light)] hover:shadow-lg transition-all"
+				>
+					<span class="text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)] group-hover:text-[var(--color-accent)] dark:group-hover:text-[var(--color-accent)] transition-colors">#</span>
+					<span class="font-medium text-[var(--color-text-heading)] dark:text-[var(--color-text-heading)] group-hover:text-[var(--color-accent)] dark:group-hover:text-[var(--color-accent)] transition-colors">{tag}</span>
+					<span class="text-sm text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]">({count})</span>
+				</a>
+			))}
+		</div>
+	</div>
+</Layout>

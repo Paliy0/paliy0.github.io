@@ -1,0 +1,18 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="404 - Page Not Found" description="This page doesn't exist in the garden">
+	<div class="max-w-2xl mx-auto text-center py-12 sm:py-24">
+		<h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4 text-[var(--color-text-heading)] dark:text-[var(--color-text-heading)]">404</h1>
+		<p class="text-xl text-[var(--color-text-body)] dark:text-[var(--color-text-muted)] mb-8">
+			This note hasn't been planted yet.
+		</p>
+		<a 
+			href="/" 
+			class="inline-block px-6 py-3 bg-[var(--color-accent-teal)] hover:bg-[var(--color-accent-teal-light)] text-[var(--color-surface-floating)] rounded-lg transition-all hover:shadow-lg hover:shadow-[var(--color-accent-teal)]/25"
+		>
+			← Back to the Garden
+		</a>
+	</div>
+</Layout>

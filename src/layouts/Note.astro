@@ -1,0 +1,99 @@
+---
+import Layout from './Layout.astro';
+import TOC from '../components/TOC.astro';
+import Breadcrumbs, { generateNoteBreadcrumbs } from '../components/Breadcrumbs.astro';
+import type { Note } from '../utils/wikilinks';
+import { getBacklinks, generateSlug } from '../utils/wikilinks';
+import { slugifyStr } from '../utils/slugify';
+
+interface Props {
+	note: Note;
+	allNotes: Note[];
+	headings?: { depth: number; slug: string; text: string }[];
+}
+
+const { note, allNotes, headings = [] } = Astro.props;
+const backlinks = getBacklinks(note, allNotes);
+const noteSlug = generateSlug(note);
+
+// Generate breadcrumbs for this note
+const breadcrumbs = generateNoteBreadcrumbs(note);
+---
+
+<Layout title={note.data.title} description={note.data.description}>
+	<div class="flex flex-col xl:flex-row xl:gap-8">
+		<article class="flex-1 max-w-none min-w-0">
+			<!-- Breadcrumbs -->
+			{breadcrumbs.length > 0 && (
+				<Breadcrumbs items={breadcrumbs} class="mb-4" />
+			)}
+
+			<header class="mb-8">
+				<h1 
+					transition:name={slugifyStr(note.data.title)}
+					class="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-text-heading)] dark:text-[var(--color-text-heading)]"
+				>{note.data.title}</h1>
+				{note.data.description && (
+					<p 
+						transition:name={`${slugifyStr(note.data.title)}-description`}
+						class="text-base sm:text-lg lg:text-xl text-[var(--color-text-body)] dark:text-[var(--color-text-muted)] mb-4"
+					>{note.data.description}</p>
+				)}
+				<div class="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]">
+					{note.data.date && (
+						<time 
+							datetime={note.data.date.toISOString()}
+							transition:name={`${slugifyStr(note.data.title)}-date`}
+						>
+							{note.data.date.toLocaleDateString('en-US', { 
+								year: 'numeric', 
+								month: 'long', 
+								day: 'numeric' 
+							})}
+						</time>
+					)}
+					{note.data.tags && note.data.tags.length > 0 && (
+						<div 
+							transition:name={`${slugifyStr(note.data.title)}-tags`}
+							class="flex gap-2"
+						>
+							{note.data.tags.map((tag: string) => (
+								<a 
+									href={`/tags/${tag}`}
+									class="px-3 py-1 bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)] hover:text-[var(--color-accent)] dark:hover:text-[var(--color-accent)] rounded-full transition-colors border border-[var(--color-border-subtle)] dark:border-[var(--color-border-subtle)]"
+								>
+									#{tag}
+								</a>
+							))}
+						</div>
+					)}
+				</div>
+			</header>
+
+			<div class="prose sm:prose-lg prose-neon max-w-none dark:prose-invert">
+				<slot />
+			</div>
+
+			{backlinks.length > 0 && (
+				<footer class="mt-16 pt-8 border-t border-[var(--color-border-subtle)] dark:border-[var(--color-border-subtle)]">
+					<h3 class="text-lg font-semibold mb-4 text-[var(--color-text-heading)] dark:text-[var(--color-text-heading)]">Linked from</h3>
+					<ul class="space-y-2">
+						{backlinks.map((backlink) => (
+							<li>
+								<a 
+									href={`/notes/${generateSlug(backlink)}`}
+									transition:name={slugifyStr(backlink.data.title)}
+									class="text-[var(--color-accent)] dark:text-[var(--color-accent)] hover:text-[var(--color-accent-coral)] dark:hover:text-[var(--color-accent-coral-light)] transition-colors"
+								>
+									{backlink.data.title}
+								</a>
+							</li>
+						))}
+					</ul>
+				</footer>
+			)}
+		</article>
+
+		<TOC headings={headings} />
+	</div>
+</Layout>

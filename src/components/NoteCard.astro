@@ -1,0 +1,151 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { generateSlug } from '../utils/wikilinks';
+import { slugifyStr } from '../utils/slugify';
+
+export interface Props {
+  note: CollectionEntry<'notes'>;
+  variant?: 'default' | 'compact' | 'featured' | 'grid';
+  showExcerpt?: boolean;
+  showTags?: boolean;
+  showDate?: boolean;
+  headingLevel?: 'h2' | 'h3' | 'h4';
+}
+
+const {
+  note,
+  variant = 'default',
+  showExcerpt = true,
+  showTags = true,
+  showDate = true,
+  headingLevel = 'h3',
+} = Astro.props;
+
+const { title, description, date, tags } = note.data;
+
+// Extract excerpt from body
+function getExcerpt(note: CollectionEntry<'notes'>): string {
+  if (description) {
+    return description;
+  }
+  
+  const body = note.body || '';
+  const firstParagraph = body.split('\n\n')[0];
+  
+  const cleanText = firstParagraph
+    .replace(/^#+\s+/gm, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g, '$1')
+    .replace(/[*_`]/g, '')
+    .trim();
+  
+  return cleanText.length > 150 
+    ? cleanText.slice(0, 150) + '...' 
+    : cleanText;
+}
+
+const excerpt = getExcerpt(note);
+const noteUrl = `/notes/${generateSlug(note)}`;
+
+// Variant-specific classes
+const cardClasses = {
+  default: 'border-b border-[var(--color-border-subtle)] dark:border-[var(--color-border-subtle)] pb-6',
+  compact: 'border-b border-[var(--color-border-subtle)] dark:border-[var(--color-border-subtle)] pb-4',
+  featured: 'bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] rounded-lg p-6',
+  grid: 'bg-[var(--color-surface-floating)] dark:bg-[var(--color-surface-elevated)] rounded-lg border border-[var(--color-border-subtle)] dark:border-[var(--color-border-subtle)] hover:border-[var(--color-accent-teal)] dark:hover:border-[var(--color-accent-teal-light)] hover:shadow-lg transition-all p-4 sm:p-6',
+};
+
+const titleClasses = {
+  default: 'text-xl font-semibold',
+  compact: 'text-lg font-medium',
+  featured: 'text-2xl font-bold',
+  grid: 'text-lg font-semibold',
+};
+
+const excerptClasses = {
+  default: 'text-[var(--color-text-body)] dark:text-[var(--color-text-muted)] mb-3 line-clamp-2',
+  compact: 'text-[var(--color-text-body)] dark:text-[var(--color-text-muted)] mb-2 line-clamp-2 text-sm',
+  featured: 'text-[var(--color-text-body)] dark:text-[var(--color-text-muted)] mb-4 line-clamp-3',
+  grid: 'text-[var(--color-text-body)] dark:text-[var(--color-text-muted)] mb-3 line-clamp-2 text-sm',
+};
+
+const dateClasses = {
+  default: 'text-sm text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]',
+  compact: 'text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]',
+  featured: 'text-sm text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]',
+  grid: 'text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]',
+};
+
+const tagClasses = {
+  default: 'text-sm text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]',
+  compact: 'text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]',
+  featured: 'text-sm text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]',
+  grid: 'text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]',
+};
+
+const HeadingTag = headingLevel;
+---
+
+<article class:list={["group note-card", cardClasses[variant]]}>
+  <a href={noteUrl} class="block no-underline hover:no-underline shadow-none hover:shadow-none">
+    <HeadingTag 
+      transition:name={slugifyStr(title)}
+      class:list={[
+        "mb-2 text-[var(--color-text-heading)] dark:text-[var(--color-text-heading)] group-hover:text-[var(--color-interactive)] dark:group-hover:text-[var(--color-interactive)] transition-colors",
+        titleClasses[variant]
+      ]}
+    >
+      {title}
+    </HeadingTag>
+    
+    {showExcerpt && excerpt && (
+      <p 
+        transition:name={`${slugifyStr(title)}-description`}
+        class={excerptClasses[variant]}
+      >
+        {excerpt}
+      </p>
+    )}
+    
+    <div class:list={["flex items-center justify-between", variant === 'compact' ? 'gap-2' : 'gap-2 sm:gap-4']}>
+      <div class:list={["flex items-center flex-wrap", variant === 'compact' ? 'gap-2' : 'gap-2 sm:gap-4']}>
+        {showDate && date && (
+          <time 
+            datetime={date.toISOString()} 
+            transition:name={`${slugifyStr(title)}-date`}
+            class={dateClasses[variant]}
+          >
+            {new Date(date).toLocaleDateString('en-US', { 
+              year: 'numeric', 
+              month: variant === 'compact' ? 'short' : 'long', 
+              day: 'numeric' 
+            })}
+          </time>
+        )}
+        
+        {showTags && tags && tags.length > 0 && (
+          <div 
+            transition:name={`${slugifyStr(title)}-tags`}
+            class="flex gap-2 flex-wrap"
+          >
+            {tags.slice(0, variant === 'compact' ? 2 : 3).map((tag: string) => (
+              <span class={tagClasses[variant]}>#{tag}</span>
+            ))}
+            {tags.length > (variant === 'compact' ? 2 : 3) && (
+              <span class={tagClasses[variant]}>+{tags.length - (variant === 'compact' ? 2 : 3)}</span>
+            )}
+          </div>
+        )}
+      </div>
+      
+      {variant !== 'compact' && (
+        <span class:list={[
+          "text-sm text-[var(--color-accent)] dark:text-[var(--color-accent)] opacity-0 group-hover:opacity-100 max-sm:opacity-100 transition-opacity flex items-center gap-1",
+          variant === 'featured' && 'font-medium'
+        ]}>
+          Read more <span class="text-[var(--color-accent-coral)]">❯</span>
+        </span>
+      )}
+    </div>
+  </a>
+</article>

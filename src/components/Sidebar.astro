@@ -1,0 +1,540 @@
+---
+import { getCollection } from 'astro:content';
+
+interface Props {
+  currentPath?: string;
+}
+
+const { currentPath = '' } = Astro.props;
+
+const notes = await getCollection('notes', (entry) => !entry.data.draft);
+
+interface FolderNode {
+  name: string;
+  path: string;
+  children: Map<string, FolderNode>;
+  notes: { id: string; title: string; slug: string }[];
+}
+
+const rootFolders = new Map<string, FolderNode>();
+const folderNotes = new Map<string, { id: string; title: string; slug: string }[]>();
+
+notes.forEach((note) => {
+  const parts = note.id.split('/');
+  const fileName = parts.pop() || '';
+  const folderPath = parts.join('/');
+  
+  const noteInfo = {
+    id: note.id,
+    title: note.data.title || fileName.replace(/\.md$/, ''),
+    slug: note.id.replace(/\.md$/, '')
+  };
+  
+  if (!folderNotes.has(folderPath)) {
+    folderNotes.set(folderPath, []);
+  }
+  folderNotes.get(folderPath)!.push(noteInfo);
+  
+  if (parts.length === 0) return;
+  
+  let currentLevel = rootFolders;
+  let currentPath = '';
+  
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    currentPath = currentPath ? `${currentPath}/${part}` : part;
+    
+    if (!currentLevel.has(part)) {
+      currentLevel.set(part, {
+        name: part,
+        path: currentPath,
+        children: new Map(),
+        notes: folderNotes.get(currentPath) || []
+      });
+    }
+    
+    currentLevel = currentLevel.get(part)!.children;
+  }
+});
+
+function sortFolders(folders: Map<string, FolderNode>): Map<string, FolderNode> {
+  const sorted = new Map([...folders.entries()].sort((a, b) => a[0].localeCompare(b[0])));
+  sorted.forEach((folder) => {
+    folder.children = sortFolders(folder.children);
+    folder.notes.sort((a, b) => a.title.localeCompare(b.title));
+  });
+  return sorted;
+}
+
+const sortedRootFolders = sortFolders(rootFolders);
+
+const activeFolderPath = currentPath.startsWith('/notes/') 
+  ? currentPath.replace('/notes/', '') 
+  : '';
+
+const activeNoteSlug = currentPath.startsWith('/notes/') 
+  ? currentPath.replace('/notes/', '') 
+  : '';
+
+function folderToArray(folder: FolderNode, level: number): any {
+  return {
+    name: folder.name,
+    path: folder.path,
+    level,
+    isActive: activeFolderPath === folder.path,
+    isOpen: activeFolderPath.startsWith(folder.path),
+    hasChildren: folder.children.size > 0 || folder.notes.length > 0,
+    notes: folder.notes,
+    children: Array.from(folder.children.values()).map(child => folderToArray(child, level + 1))
+  };
+}
+
+const folderTree = Array.from(sortedRootFolders.values()).map(folder => folderToArray(folder, 0));
+---
+
+<aside 
+  id="sidebar" 
+  class="sidebar sidebar-hidden w-72 h-screen sticky top-0 overflow-y-auto border-r border-[var(--color-border-subtle)] dark:border-[var(--color-border-subtle)] bg-[var(--color-surface-floating)] dark:bg-[var(--color-surface-base)] p-4"
+  data-active-path={activeFolderPath}
+  data-active-note={activeNoteSlug}
+>
+  <nav class="space-y-0.5">
+    <a href="/" class="flex items-center gap-2 text-lg font-bold text-[var(--color-accent)] dark:text-[var(--color-accent)] hover:opacity-80 transition-all mb-4 no-underline">
+      <span>❯</span> Garden
+    </a>
+    
+    <a 
+      href="/" 
+      class:list={[
+        "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors no-underline",
+        currentPath === '/' 
+          ? "bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)]" 
+          : "opacity-70 hover:opacity-100 hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)]"
+      ]}
+    >
+      <svg class="w-5 h-5 text-[var(--color-accent)]" viewBox="0 0 20 20" fill="currentColor">
+        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+      </svg>
+      <span class:list={["font-medium", currentPath === '/' ? "text-[var(--color-accent)]" : "text-[var(--color-text-body)] dark:text-[var(--color-text-muted)]"]}>Home</span>
+    </a>
+    
+    <a 
+      href="/notes" 
+      class:list={[
+        "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors no-underline",
+        currentPath === '/notes'
+          ? "bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)]" 
+          : "opacity-70 hover:opacity-100 hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)]"
+      ]}
+    >
+      <svg class="w-5 h-5 text-[var(--color-accent)]" viewBox="0 0 20 20" fill="currentColor">
+        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 1 1 0 000 2H6v10h10v-2a1 1 0 112 0v2a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 011-1h6a1 1 0 110 2H8a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H8z" clip-rule="evenodd" />
+      </svg>
+      <span class:list={["font-medium", currentPath === '/notes' ? "text-[var(--color-accent)]" : "text-[var(--color-text-body)] dark:text-[var(--color-text-muted)]"]}>All Notes</span>
+    </a>
+    
+    <a 
+      href="/tags" 
+      class:list={[
+        "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors no-underline",
+        currentPath.startsWith('/tags')
+          ? "bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)]" 
+          : "opacity-70 hover:opacity-100 hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)]"
+      ]}
+    >
+      <svg class="w-5 h-5 text-[var(--color-accent)]" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+      </svg>
+      <span class:list={["font-medium", currentPath.startsWith('/tags') ? "text-[var(--color-accent)]" : "text-[var(--color-text-body)] dark:text-[var(--color-text-muted)]"]}>Tags</span>
+    </a>
+  </nav>
+  
+  {folderTree.length > 0 && (
+    <div class="mt-6 pt-6 border-t border-[var(--color-border-subtle)] dark:border-[var(--color-border-subtle)]">
+      <div class="flex items-center justify-between mb-2 px-3">
+        <h3 class="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)] uppercase tracking-wider">
+          Folders
+        </h3>
+        <button
+          id="sidebar-toggle-all"
+          class="p-1.5 rounded-lg bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] text-[var(--color-accent)] dark:text-[var(--color-accent)] hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)] hover:text-[var(--color-accent-teal-dark)] dark:hover:text-[var(--color-accent)] border border-[var(--color-accent-teal)]/20 dark:border-[var(--color-accent-teal-light)]/20 hover:border-[var(--color-accent-teal)]/40 dark:hover:border-[var(--color-accent-teal-light)]/40 transition-colors"
+          title="Collapse/Expand all folders"
+          aria-label="Collapse all folders"
+        >
+          <svg id="expand-icon" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 5.83L15.17 9l1.41-1.41L12 3 7.41 7.59 8.83 9 12 5.83zm0 12.34L8.83 15l-1.41 1.41L12 21l4.59-4.59L15.17 15 12 18.17z"/>
+          </svg>
+          <svg id="collapse-icon" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M7.41 18.59L8.83 20 12 16.83 15.17 20l1.41-1.41L12 14l-4.59 4.59zm9.18-13.18L15.17 4 12 7.17 8.83 4 7.41 5.41 12 10l4.59-4.59z"/>
+          </svg>
+        </button>
+      </div>
+      <div class="folder-tree" id="folder-tree">
+        {folderTree.map((folder) => (
+          <div class="folder-node" data-path={folder.path} data-has-children={folder.hasChildren}>
+            <div
+              class:list={[
+                "folder-row flex items-center gap-3 rounded-lg transition-colors group cursor-pointer select-none py-2",
+                folder.isActive
+                  ? "bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] text-[var(--color-accent)] dark:text-[var(--color-accent)]"
+                  : "text-[var(--color-text-body)] dark:text-[var(--color-text-muted)] hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)]"
+              ]}
+              data-folder-path={folder.path}
+              style={`padding-left: ${folder.level * 16 + 12}px; padding-right: 12px;`}
+            >
+              {folder.hasChildren ? (
+                <div class="folder-toggle shrink-0">
+                  <svg class="folder-icon-closed w-5 h-5 text-[var(--color-accent)]" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                  </svg>
+                  <svg class="folder-icon-open w-5 h-5 text-[var(--color-accent)] hidden" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1H8a3 3 0 00-3 3v1.5a1.5 1.5 0 01-3 0V6z" clip-rule="evenodd" />
+                    <path d="M6 12a2 2 0 012-2h8a2 2 0 012 2v2a2 2 0 01-2 2H2h2a2 2 0 002-2v-2z" />
+                  </svg>
+                </div>
+              ) : (
+                <svg class="w-5 h-5 text-[var(--color-accent)] shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                </svg>
+              )}
+
+              <a
+                href={`/notes/${folder.path}`}
+                class="folder-link flex-1 min-w-0 font-medium truncate capitalize text-inherit hover:text-inherit no-underline"
+                onclick="event.stopPropagation()"
+              >
+                {folder.name.replace(/-/g, ' ')}
+              </a>
+            </div>
+            
+            {folder.hasChildren && (
+              <div 
+                class="folder-children overflow-hidden transition-all duration-200" 
+                data-parent-path={folder.path}
+              >
+                {folder.children.map((child: any) => (
+                  <div class="folder-node" data-path={child.path} data-has-children={child.hasChildren}>
+                    <div 
+                      class:list={[
+                        "folder-row flex items-center gap-3 rounded-lg transition-colors group cursor-pointer select-none py-2",
+                        child.isActive 
+                          ? "bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] text-[var(--color-accent)] dark:text-[var(--color-accent)]" 
+                          : "text-[var(--color-text-body)] dark:text-[var(--color-text-muted)] hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)]"
+                      ]}
+                      data-folder-path={child.path}
+                      style={`padding-left: ${child.level * 16 + 12}px; padding-right: 12px;`}
+                    >
+                      {child.hasChildren ? (
+                        <div class="folder-toggle shrink-0">
+                          <svg class="folder-icon-closed w-5 h-5 text-[var(--color-accent)]" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                          </svg>
+                          <svg class="folder-icon-open w-5 h-5 text-[var(--color-accent)] hidden" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1H8a3 3 0 00-3 3v1.5a1.5 1.5 0 01-3 0V6z" clip-rule="evenodd" />
+                            <path d="M6 12a2 2 0 012-2h8a2 2 0 012 2v2a2 2 0 01-2 2H2h2a2 2 0 002-2v-2z" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <svg class="w-5 h-5 text-[var(--color-accent)] shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                        </svg>
+                      )}
+                      
+                      <a
+                        href={`/notes/${child.path}`}
+                        class="folder-link flex-1 min-w-0 font-medium truncate capitalize text-inherit hover:text-inherit no-underline"
+                        onclick="event.stopPropagation()"
+                      >
+                        {child.name.replace(/-/g, ' ')}
+                      </a>
+                    </div>
+                    
+                    {child.hasChildren && (
+                      <div 
+                        class="folder-children overflow-hidden transition-all duration-200" 
+                        data-parent-path={child.path}
+                      >
+                        {child.children.map((grandchild: any) => (
+                          <div class="folder-node" data-path={grandchild.path} data-has-children={grandchild.hasChildren}>
+                            <div 
+                              class:list={[
+                                "folder-row flex items-center gap-3 rounded-lg transition-colors group cursor-pointer select-none py-2",
+                                grandchild.isActive 
+                                  ? "bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] text-[var(--color-accent)] dark:text-[var(--color-accent)]" 
+                                  : "text-[var(--color-text-body)] dark:text-[var(--color-text-muted)] hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)]"
+                              ]}
+                              data-folder-path={grandchild.path}
+                              style={`padding-left: ${grandchild.level * 16 + 12}px; padding-right: 12px;`}
+                            >
+                              {grandchild.hasChildren ? (
+                                <div class="folder-toggle shrink-0">
+                                  <svg class="folder-icon-closed w-5 h-5 text-[var(--color-accent)]" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                                  </svg>
+                                  <svg class="folder-icon-open w-5 h-5 text-[var(--color-accent)] hidden" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1H8a3 3 0 00-3 3v1.5a1.5 1.5 0 01-3 0V6z" clip-rule="evenodd" />
+                                    <path d="M6 12a2 2 0 012-2h8a2 2 0 012 2v2a2 2 0 01-2 2H2h2a2 2 0 002-2v-2z" />
+                                  </svg>
+                                </div>
+                              ) : (
+                                <svg class="w-5 h-5 text-[var(--color-accent)] shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                  <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                                </svg>
+                              )}
+                              
+                              <a
+                                href={`/notes/${grandchild.path}`}
+                                class="folder-link flex-1 min-w-0 font-medium truncate capitalize text-inherit hover:text-inherit no-underline"
+                                onclick="event.stopPropagation()"
+                              >
+                                {grandchild.name.replace(/-/g, ' ')}
+                              </a>
+                            </div>
+                            
+                            {grandchild.notes.length > 0 && (
+                              <div class="folder-children" data-parent-path={grandchild.path}>
+                                {grandchild.notes.map((note: any) => (
+                                  <a
+                                    href={`/notes/${note.slug}`}
+                                    class:list={[
+                                      "sidebar-note-link flex items-center gap-3 rounded-lg transition-colors py-2 pl-4 pr-3 no-underline hover:no-underline",
+                                      activeNoteSlug === note.slug
+                                        ? "bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] text-[var(--color-accent)] dark:text-[var(--color-accent)]"
+                                        : "text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)] hover:text-[var(--color-text-body)] dark:hover:text-[var(--color-text-body)]"
+                                    ]}
+                                    style={`padding-left: ${(grandchild.level + 1) * 16 + 12}px;`}
+                                  >
+                                    <svg class="w-4 h-4 text-[var(--color-text-placeholder)] dark:text-[var(--color-text-muted)] shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span class="flex-1 min-w-0 text-sm truncate">{note.title}</span>
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        
+                        {child.notes.length > 0 && (
+                          <div class="folder-children" data-parent-path={child.path}>
+                            {child.notes.map((note: any) => (
+                              <a
+                                href={`/notes/${note.slug}`}
+                                class:list={[
+                                  "sidebar-note-link flex items-center gap-3 rounded-lg transition-colors py-2 pl-4 pr-3 no-underline hover:no-underline",
+                                  activeNoteSlug === note.slug
+                                    ? "bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] text-[var(--color-accent)] dark:text-[var(--color-accent)]"
+                                    : "text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)] hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)] hover:text-[var(--color-text-body)] dark:hover:text-[var(--color-text-body)]"
+                                ]}
+                                style={`padding-left: ${(child.level + 1) * 16 + 12}px;`}
+                              >
+                                <svg class="w-4 h-4 text-[var(--color-text-placeholder)] dark:text-[var(--color-text-muted)] shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="flex-1 min-w-0 text-sm truncate">{note.title}</span>
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                {folder.notes.length > 0 && (
+                  <div class="folder-children" data-parent-path={folder.path}>
+                    {folder.notes.map((note: any) => (
+                      <a
+                        href={`/notes/${note.slug}`}
+                        class:list={[
+                          "sidebar-note-link flex items-center gap-3 rounded-lg transition-colors py-2 pl-4 pr-3 no-underline hover:no-underline",
+                          activeNoteSlug === note.slug
+                            ? "bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] text-[var(--color-accent)] dark:text-[var(--color-accent)]"
+                            : "text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)] hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)] hover:text-[var(--color-text-body)] dark:hover:text-[var(--color-text-body)]"
+                        ]}
+                        style={`padding-left: ${(folder.level + 1) * 16 + 12}px;`}
+                      >
+                        <svg class="w-4 h-4 text-[var(--color-text-placeholder)] dark:text-[var(--color-text-muted)] shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="flex-1 min-w-0 text-sm truncate">{note.title}</span>
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+</aside>
+
+<script>
+  const STORAGE_KEY = 'sidebar-expanded-folders';
+
+  function loadExpandedState(): Set<string> {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        return new Set(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error('Failed to load sidebar state:', e);
+    }
+    return new Set();
+  }
+
+  function saveExpandedState(expanded: Set<string>) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([...expanded]));
+    } catch (e) {
+      console.error('Failed to save sidebar state:', e);
+    }
+  }
+
+  function updateFolderIcon(folderNode: Element, isExpanded: boolean) {
+    const closedIcon = folderNode.querySelector('.folder-icon-closed');
+    const openIcon = folderNode.querySelector('.folder-icon-open');
+    
+    if (closedIcon && openIcon) {
+      if (isExpanded) {
+        closedIcon.classList.add('hidden');
+        openIcon.classList.remove('hidden');
+      } else {
+        closedIcon.classList.remove('hidden');
+        openIcon.classList.add('hidden');
+      }
+    }
+  }
+
+  function applyExpandedState(expanded: Set<string>) {
+    document.querySelectorAll('.folder-node[data-has-children="true"]').forEach((node) => {
+      const path = node.getAttribute('data-path');
+      const children = node.querySelector('.folder-children');
+      
+      if (path && children) {
+        const isExpanded = expanded.has(path);
+        if (isExpanded) {
+          children.classList.remove('hidden');
+        } else {
+          children.classList.add('hidden');
+        }
+        updateFolderIcon(node, isExpanded);
+      }
+    });
+
+    updateToggleButtonIcon(expanded);
+  }
+
+  function updateToggleButtonIcon(expanded: Set<string>) {
+    const expandIcon = document.getElementById('expand-icon');
+    const collapseIcon = document.getElementById('collapse-icon');
+    const toggleButton = document.getElementById('sidebar-toggle-all');
+    const totalFolders = document.querySelectorAll('.folder-node[data-has-children="true"]').length;
+
+    if (expandIcon && collapseIcon && toggleButton) {
+      const isAllExpanded = expanded.size >= totalFolders && totalFolders > 0;
+      if (isAllExpanded) {
+        expandIcon.classList.add('hidden');
+        collapseIcon.classList.remove('hidden');
+        toggleButton.setAttribute('title', 'Collapse all folders');
+        toggleButton.setAttribute('aria-label', 'Collapse all folders');
+      } else {
+        expandIcon.classList.remove('hidden');
+        collapseIcon.classList.add('hidden');
+        toggleButton.setAttribute('title', 'Expand all folders');
+        toggleButton.setAttribute('aria-label', 'Expand all folders');
+      }
+    }
+  }
+
+  function initFolderTree() {
+    const expandedFolders = loadExpandedState();
+    const sidebar = document.getElementById('sidebar');
+    const activePath = sidebar?.getAttribute('data-active-path');
+
+    if (activePath && expandedFolders.size === 0) {
+      const parts = activePath.split('/');
+      let buildPath = '';
+      for (const part of parts) {
+        buildPath = buildPath ? `${buildPath}/${part}` : part;
+        expandedFolders.add(buildPath);
+      }
+      saveExpandedState(expandedFolders);
+    }
+
+    setTimeout(() => applyExpandedState(expandedFolders), 0);
+
+    // Attach click handlers to folder rows
+    document.querySelectorAll('.folder-row').forEach((row) => {
+      row.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).closest('.folder-link')) {
+          return;
+        }
+
+        const folderPath = row.getAttribute('data-folder-path');
+        const folderNode = row.closest('.folder-node');
+        const children = folderNode?.querySelector('.folder-children');
+
+        if (folderPath && children && folderNode) {
+          const isHidden = children.classList.contains('hidden');
+          const expanded = loadExpandedState();
+
+          if (isHidden) {
+            children.classList.remove('hidden');
+            expanded.add(folderPath);
+            updateFolderIcon(folderNode, true);
+          } else {
+            children.classList.add('hidden');
+            expanded.delete(folderPath);
+            updateFolderIcon(folderNode, false);
+          }
+
+          saveExpandedState(expanded);
+          updateToggleButtonIcon(expanded);
+        }
+      });
+    });
+
+    // Attach click handler to toggle all button
+    document.getElementById('sidebar-toggle-all')?.addEventListener('click', () => {
+      const allFolders = document.querySelectorAll('.folder-node[data-has-children="true"]');
+      const expanded = loadExpandedState();
+      const totalFolders = allFolders.length;
+      const isAllExpanded = expanded.size >= totalFolders;
+
+      if (isAllExpanded) {
+        expanded.clear();
+        allFolders.forEach((node) => {
+          const children = node.querySelector('.folder-children');
+          if (children) {
+            children.classList.add('hidden');
+          }
+          updateFolderIcon(node, false);
+        });
+      } else {
+        allFolders.forEach((node) => {
+          const path = node.getAttribute('data-path');
+          const children = node.querySelector('.folder-children');
+          if (path && children) {
+            children.classList.remove('hidden');
+            expanded.add(path);
+          }
+          updateFolderIcon(node, true);
+        });
+      }
+
+      saveExpandedState(expanded);
+      updateToggleButtonIcon(expanded);
+    });
+  }
+
+  // Run on initial page load
+  initFolderTree();
+
+  // Re-run after each view transition
+  document.addEventListener('astro:page-load', initFolderTree);
+</script>

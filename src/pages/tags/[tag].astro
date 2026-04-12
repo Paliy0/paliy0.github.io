@@ -1,0 +1,50 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import NoteCard from '../../components/NoteCard.astro';
+
+export async function getStaticPaths() {
+  const notes = await getCollection('notes', ({ data }) => !data.draft);
+  const allTags = new Set<string>();
+  
+  notes.forEach(note => {
+    note.data.tags?.forEach((tag: string) => allTags.add(tag));
+  });
+  
+  return Array.from(allTags).map(tag => ({
+    params: { tag },
+    props: { tag },
+  }));
+}
+
+const { tag } = Astro.props;
+
+const allNotes = await getCollection('notes', ({ data }) => !data.draft);
+const taggedNotes = allNotes.filter(note => 
+  note.data.tags?.includes(tag)
+).sort((a, b) => a.data.title.localeCompare(b.data.title));
+---
+
+<Layout title={`#${tag} - Digital Garden`} description={`Notes tagged with #${tag}`}>
+	<div class="max-w-4xl mx-auto">
+		<header class="mb-12">
+			<div class="flex items-center gap-3 mb-4">
+				<a href="/tags" class="text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)] hover:text-[var(--color-accent)] dark:hover:text-[var(--color-accent)] transition-colors">
+					← All Tags
+				</a>
+			</div>
+			<h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 text-[var(--color-text-heading)] dark:text-[var(--color-text-heading)]">
+				<span class="text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]">#</span>{tag}
+			</h1>
+			<p class="text-[var(--color-text-body)] dark:text-[var(--color-text-muted)]">
+				{taggedNotes.length} note{taggedNotes.length !== 1 ? 's' : ''} tagged with #{tag}
+			</p>
+		</header>
+
+		<div class="grid gap-4 md:grid-cols-2">
+			{taggedNotes.map((note) => (
+				<NoteCard note={note} variant="grid" headingLevel="h2" showDate={true} />
+			))}
+		</div>
+	</div>
+</Layout>
