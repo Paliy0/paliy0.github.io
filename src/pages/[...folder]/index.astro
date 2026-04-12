@@ -4,9 +4,8 @@ import Layout from '../../layouts/Layout.astro';
 import NoteCard from '../../components/NoteCard.astro';
 import Breadcrumbs, { generateFolderBreadcrumbs } from '../../components/Breadcrumbs.astro';
 
-const RESERVED_ROUTES = new Set(['tags', 'notes', '404']);
-
 export async function getStaticPaths() {
+  const RESERVED_ROUTES = new Set(['tags', 'notes', '404']);
   const notes = await getCollection('notes', ({ data }) => !data.draft);
 
   // Get all unique folder paths
