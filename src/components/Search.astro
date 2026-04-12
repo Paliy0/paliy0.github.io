@@ -19,15 +19,15 @@ const searchIndex = notes.map(note => ({
 </script>
 
 <!-- Search Modal -->
-<div 
-  id="search-modal" 
-  class="fixed inset-0 z-[60] hidden"
+<div
+  id="search-modal"
+  class="fixed inset-0 z-[60] pointer-events-none"
   role="dialog"
   aria-modal="true"
 >
-  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" id="search-backdrop"></div>
+  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 transition-opacity duration-300" id="search-backdrop"></div>
   
-  <div class="absolute top-20 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4">
+  <div id="search-dialog" class="absolute top-20 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 transition-all duration-300 scale-95 -translate-y-2 opacity-0">
     <div class="bg-[var(--color-surface-floating)] dark:bg-[var(--color-surface-base)] rounded-xl shadow-2xl overflow-hidden border border-[var(--color-border-subtle)] dark:border-[var(--color-border-subtle)]">
       <div class="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border-subtle)] dark:border-[var(--color-border-subtle)]">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]">
@@ -61,6 +61,7 @@ const searchIndex = notes.map(note => ({
   function getElements() {
     return {
       searchModal: document.getElementById('search-modal'),
+      searchDialog: document.getElementById('search-dialog'),
       searchBackdrop: document.getElementById('search-backdrop'),
       searchInput: document.getElementById('search-input'),
       searchResults: document.getElementById('search-results'),
@@ -83,26 +84,51 @@ const searchIndex = notes.map(note => ({
   
   function openSearch() {
     initSearch();
-    const { searchModal, searchInput } = getElements();
-    if (searchModal) {
-      searchModal.classList.remove('hidden');
+    const { searchModal, searchBackdrop, searchDialog, searchInput } = getElements();
+
+    if (searchModal && searchBackdrop && searchDialog) {
+      searchModal.classList.remove('pointer-events-none');
+      searchModal.classList.add('pointer-events-auto');
+
+      requestAnimationFrame(() => {
+        searchBackdrop.classList.remove('opacity-0');
+        searchBackdrop.classList.add('opacity-100');
+
+        searchDialog.classList.remove('scale-95', '-translate-y-2', 'opacity-0');
+        searchDialog.classList.add('scale-100', 'translate-y-0', 'opacity-100');
+      });
     }
+
     if (searchInput) {
-      searchInput.focus();
+      setTimeout(() => searchInput.focus(), 50);
     }
     document.body.style.overflow = 'hidden';
   }
-  
+
   function closeSearch() {
-    const { searchModal, searchInput, searchResults } = getElements();
-    if (searchModal) {
-      searchModal.classList.add('hidden');
+    const { searchModal, searchBackdrop, searchDialog, searchInput, searchResults } = getElements();
+
+    if (searchModal && searchBackdrop && searchDialog) {
+      searchBackdrop.classList.remove('opacity-100');
+      searchBackdrop.classList.add('opacity-0');
+
+      searchDialog.classList.remove('scale-100', 'translate-y-0', 'opacity-100');
+      searchDialog.classList.add('scale-95', '-translate-y-2', 'opacity-0');
+
+      // Re-disable pointer events after transition completes
+      setTimeout(() => {
+        searchModal.classList.remove('pointer-events-auto');
+        searchModal.classList.add('pointer-events-none');
+      }, 300);
     }
+
     if (searchInput) {
-      (searchInput as HTMLInputElement).value = '';
-    }
-    if (searchResults) {
-      searchResults.innerHTML = '<div class="p-8 text-center text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]">Type to search notes...</div>';
+      setTimeout(() => {
+        (searchInput as HTMLInputElement).value = '';
+        if (searchResults) {
+          searchResults.innerHTML = '<div class="p-8 text-center text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]">Type to search notes...</div>';
+        }
+      }, 300);
     }
     document.body.style.overflow = '';
     selectedIndex = -1;
@@ -238,7 +264,7 @@ const searchIndex = notes.map(note => ({
     }
     
     const searchModal = document.getElementById('search-modal');
-    if (!searchModal || searchModal.classList.contains('hidden')) return;
+    if (!searchModal || searchModal.classList.contains('pointer-events-none')) return;
 
     // ESC to close
     if (e.key === 'Escape') {
