@@ -34,25 +34,28 @@ const { title = "Digital Garden", description = "A growing collection of notes a
 				}
 
 				// Sidebar
-				const sidebar = document.getElementById('sidebar');
 				const savedState = localStorage.getItem('sidebar-collapsed');
-				const isMobile = window.innerWidth >= 1024;
+				const isDesktop = window.innerWidth >= 1024;
 				
-				if (isMobile && savedState !== 'true' && sidebar) {
-					sidebar.classList.remove('sidebar-hidden');
+				if (isDesktop && savedState !== 'true') {
+					document.documentElement.classList.add('sidebar-open');
 				}
 			})();
 
 			// Handle sidebar state during view transitions
 			document.addEventListener('astro:before-swap', (event) => {
+				// Reset scroll lock
+				document.body.style.overflow = '';
+
 				const sidebar = event.newDocument.getElementById('sidebar');
 				if (!sidebar) return;
 				
 				const savedState = localStorage.getItem('sidebar-collapsed');
-				const isMobile = window.innerWidth >= 1024;
+				const isDesktop = window.innerWidth >= 1024;
 				
-				if (isMobile && savedState !== 'true') {
+				if (isDesktop && savedState !== 'true') {
 					sidebar.classList.remove('sidebar-hidden');
+					event.newDocument.documentElement.classList.add('sidebar-open');
 				} else {
 					sidebar.classList.add('sidebar-hidden');
 				}
@@ -63,11 +66,24 @@ const { title = "Digital Garden", description = "A growing collection of notes a
 		<Search />
 
 		<!-- Mobile Header -->
-		<header class="lg:hidden bg-[var(--color-surface-floating)] dark:bg-[var(--color-surface-base)] border-b border-[var(--color-border-subtle)] dark:border-[var(--color-border-subtle)] sticky top-0 z-50">
+		<header class="lg:hidden bg-[var(--color-surface-floating)] dark:bg-[var(--color-surface-base)] border-b border-[var(--color-border-subtle)] dark:border-[var(--color-border-subtle)] sticky top-0 z-40">
 			<nav class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-				<a href="/" class="text-xl font-bold text-[var(--color-text-heading)] dark:text-[var(--color-text-heading)] hover:text-[var(--color-accent)] dark:hover:text-[var(--color-accent)] transition-all">
-					<span class="text-[var(--color-accent)]">❯</span> Garden
-				</a>
+				<div class="flex items-center gap-3">
+					<button
+						id="sidebar-toggle-mobile"
+						class="p-1.5 rounded-lg bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)] text-[var(--color-accent)] dark:text-[var(--color-accent)] border border-[var(--color-accent-teal)]/20 dark:border-[var(--color-accent-teal-light)]/20 transition-colors"
+						aria-label="Toggle sidebar"
+					>
+						<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<line x1="3" y1="12" x2="21" y2="12"></line>
+							<line x1="3" y1="6" x2="21" y2="6"></line>
+							<line x1="3" y1="18" x2="21" y2="18"></line>
+						</svg>
+					</button>
+					<a href="/" class="text-xl font-bold text-[var(--color-text-heading)] dark:text-[var(--color-text-heading)] hover:text-[var(--color-accent)] dark:hover:text-[var(--color-accent)] transition-all">
+						<span class="text-[var(--color-accent)]">❯</span> Garden
+					</a>
+				</div>
 				<div class="flex items-center gap-2">
 					<ThemeToggle />
 					<button id="search-trigger-mobile" class="flex items-center gap-2 px-4 py-2 bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] rounded-lg hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)] transition-all text-sm text-[var(--color-text-body)] dark:text-[var(--color-text-muted)] hover:text-[var(--color-accent)] dark:hover:text-[var(--color-accent)]" aria-label="Search notes">
@@ -144,7 +160,7 @@ const { title = "Digital Garden", description = "A growing collection of notes a
 					}
 				}
 
-				function saveState(collapsed) {
+				function saveState(collapsed: boolean) {
 					try {
 						localStorage.setItem(STORAGE_KEY, collapsed.toString());
 					} catch (e) {}
@@ -152,37 +168,72 @@ const { title = "Digital Garden", description = "A growing collection of notes a
 
 				function updateSidebar() {
 					const SIDEBAR = document.getElementById('sidebar');
+					const BACKDROP = document.getElementById('sidebar-backdrop');
 					if (!SIDEBAR) return;
 					
 					const collapsed = loadState();
 					if (isMobile()) {
 						SIDEBAR.classList.add('sidebar-hidden');
+						if (BACKDROP) BACKDROP.classList.add('hidden');
+						document.body.style.overflow = '';
 					} else if (collapsed) {
 						SIDEBAR.classList.add('sidebar-hidden');
+						if (BACKDROP) BACKDROP.classList.add('hidden');
+						document.body.style.overflow = '';
 					} else {
 						SIDEBAR.classList.remove('sidebar-hidden');
+						if (BACKDROP) BACKDROP.classList.add('hidden'); // Desktop doesn't show backdrop
+						document.body.style.overflow = '';
 					}
+					
+					// Remove initial flash prevention class
+					document.documentElement.classList.remove('sidebar-open');
 				}
 
 				function initSidebar() {
-					// Note: sidebar state is already set by inline script in <head>
-					// We only handle the toggle button event here
-
-					// Use event delegation - attach once to document, not to button
 					document.addEventListener('click', function(e) {
-						const toggle = document.getElementById('sidebar-toggle');
+						const toggleDesktop = document.getElementById('sidebar-toggle');
+						const toggleMobile = document.getElementById('sidebar-toggle-mobile');
+						const closeMobile = document.getElementById('sidebar-close-mobile');
 						const sidebar = document.getElementById('sidebar');
+						const backdrop = document.getElementById('sidebar-backdrop');
 						
-						if (toggle && (e.target === toggle || toggle.contains(e.target))) {
+						const target = e.target as Node;
+						
+						// Handle Backdrop or Close Button Click
+						const isCloseMobile = closeMobile && (target === closeMobile || closeMobile.contains(target));
+						if ((backdrop && (target === backdrop || backdrop.contains(target))) || isCloseMobile) {
+							if (!sidebar) return;
+							sidebar.classList.add('sidebar-hidden');
+							if (backdrop) backdrop.classList.add('hidden');
+							document.body.style.overflow = '';
+							return; // Don't save state for mobile dismiss
+						}
+
+						// Handle Toggle Click
+						const isToggleDesktop = toggleDesktop && (target === toggleDesktop || toggleDesktop.contains(target));
+						const isToggleMobile = toggleMobile && (target === toggleMobile || toggleMobile.contains(target));
+
+						if (isToggleDesktop || isToggleMobile) {
 							if (!sidebar) return;
 							const isHidden = sidebar.classList.contains('sidebar-hidden');
 							
 							if (isHidden) {
 								sidebar.classList.remove('sidebar-hidden');
+								if (isMobile() && backdrop) {
+									backdrop.classList.remove('hidden');
+									document.body.style.overflow = 'hidden';
+								}
 							} else {
 								sidebar.classList.add('sidebar-hidden');
+								if (backdrop) backdrop.classList.add('hidden');
+								document.body.style.overflow = '';
 							}
-							saveState(!isHidden);
+							
+							// Only save state on desktop
+							if (!isMobile()) {
+								saveState(!isHidden);
+							}
 						}
 					});
 				}
@@ -231,6 +282,13 @@ const { title = "Digital Garden", description = "A growing collection of notes a
 		opacity: 0;
 		visibility: hidden;
 		transform: translateX(-100%);
+	}
+
+	html.sidebar-open .sidebar-hidden {
+		width: 18rem !important; /* w-72 */
+		opacity: 1;
+		visibility: visible;
+		transform: translateX(0);
 	}
 
 	/* Main content margin transition */

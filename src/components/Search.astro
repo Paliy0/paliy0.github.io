@@ -105,22 +105,33 @@ const searchIndex = notes.map(note => ({
       searchResults.innerHTML = '<div class="p-8 text-center text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]">Type to search notes...</div>';
     }
     document.body.style.overflow = '';
+    selectedIndex = -1;
   }
   
+  function escapeHtml(unsafe) {
+    return (unsafe || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  }
+
   function highlightMatch(text, matches) {
-    if (!matches || matches.length === 0) return text;
+    if (!matches || matches.length === 0) return escapeHtml(text);
     
-    let result = text;
+    let result = '';
+    let lastIndex = 0;
     const indices = matches[0].indices;
     
-    // Sort indices in reverse order to replace from end to start
-    const sortedIndices = [...indices].sort((a, b) => b[0] - a[0]);
+    // Sort indices ascending
+    const sortedIndices = [...indices].sort((a, b) => a[0] - b[0]);
     
     for (const [start, end] of sortedIndices.slice(0, 3)) {
-      const before = result.slice(0, start);
-      const match = result.slice(start, end + 1);
-      const after = result.slice(end + 1);
-      result = before + '<mark class="bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] text-[var(--color-accent)] dark:text-[var(--color-accent)]">' + match + '</mark>' + after;
+      if (start > lastIndex) {
+        result += escapeHtml(text.slice(lastIndex, start));
+      }
+      result += '<mark class="bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] text-[var(--color-accent)] dark:text-[var(--color-accent)]">' + escapeHtml(text.slice(start, end + 1)) + '</mark>';
+      lastIndex = end + 1;
+    }
+    
+    if (lastIndex < text.length) {
+      result += escapeHtml(text.slice(lastIndex));
     }
     
     return result;
@@ -145,8 +156,8 @@ const searchIndex = notes.map(note => ({
       const description = note.description 
         ? highlightMatch(note.description.slice(0, 150), descMatch ? [descMatch] : [])
         : (contentMatch 
-            ? '...' + highlightMatch(note.content.slice(contentMatch.indices[0][0], contentMatch.indices[0][0] + 100), [contentMatch]) + '...'
-            : note.content.slice(0, 150) + '...');
+            ? '...' + highlightMatch(note.content.slice(contentMatch.indices[0][0], contentMatch.indices[0][0] + 100), [{...contentMatch, indices: [[0, 100]]}]) + '...'
+            : escapeHtml(note.content.slice(0, 150)) + '...');
       
       return `
         <a href="/${note.slug}" class="block p-4 hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)] transition-colors border-b border-[var(--color-border-subtle)] dark:border-[var(--color-border-subtle)] last:border-0">
@@ -154,7 +165,7 @@ const searchIndex = notes.map(note => ({
           <p class="text-sm text-[var(--color-text-body)] dark:text-[var(--color-text-muted)] line-clamp-2">${description}</p>
           ${note.tags.length > 0 ? `
             <div class="flex gap-2 mt-2">
-              ${note.tags.slice(0, 3).map(tag => `<span class="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]">#${tag}</span>`).join('')}
+              ${note.tags.slice(0, 3).map(tag => `<span class="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]">#${escapeHtml(tag)}</span>`).join('')}
             </div>
           ` : ''}
         </a>
@@ -192,9 +203,12 @@ const searchIndex = notes.map(note => ({
     searchInput?.addEventListener('input', handleInput);
   }
   
+  let selectedIndex = -1;
+
   function handleInput(e) {
     const query = e.target.value.trim();
     const searchResults = document.getElementById('search-results');
+    selectedIndex = -1;
     if (!query) {
       if (searchResults) {
         searchResults.innerHTML = '<div class="p-8 text-center text-[var(--color-text-muted)] dark:text-[var(--color-text-placeholder)]">Type to search notes...</div>';
@@ -220,10 +234,45 @@ const searchIndex = notes.map(note => ({
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault();
       openSearch();
+      return;
     }
+    
+    const searchModal = document.getElementById('search-modal');
+    if (!searchModal || searchModal.classList.contains('hidden')) return;
+
     // ESC to close
     if (e.key === 'Escape') {
       closeSearch();
+      return;
+    }
+
+    const results = document.querySelectorAll('#search-results a');
+    if (results.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedIndex = (selectedIndex + 1) % results.length;
+      updateSelection(results);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedIndex = selectedIndex - 1 < 0 ? results.length - 1 : selectedIndex - 1;
+      updateSelection(results);
+    } else if (e.key === 'Enter' && selectedIndex >= 0) {
+      e.preventDefault();
+      (results[selectedIndex] as HTMLAnchorElement).click();
     }
   });
+
+  function updateSelection(results) {
+    results.forEach((el, i) => {
+      if (i === selectedIndex) {
+        el.classList.add('bg-[var(--color-surface-elevated)]', 'dark:bg-[var(--color-surface-floating)]', 'border-l-4', 'border-[var(--color-accent)]', 'pl-3');
+        el.classList.remove('pl-4'); // Adjust padding to compensate for border
+        (el as HTMLElement).scrollIntoView({ block: 'nearest' });
+      } else {
+        el.classList.remove('bg-[var(--color-surface-elevated)]', 'dark:bg-[var(--color-surface-floating)]', 'border-l-4', 'border-[var(--color-accent)]', 'pl-3');
+        el.classList.add('pl-4');
+      }
+    });
+  }
 </script>

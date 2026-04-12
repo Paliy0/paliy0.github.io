@@ -94,22 +94,6 @@
 
     // Re-apply theme after view transitions (astro:after-swap)
     document.addEventListener('astro:after-swap', () => {
-      const savedTheme = localStorage.getItem('theme');
-      if (savedTheme) {
-        if (savedTheme === 'dark') {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
-      } else {
-        // Check system preference
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (prefersDark) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
-      }
       updateAllIcons();
     });
   })();
