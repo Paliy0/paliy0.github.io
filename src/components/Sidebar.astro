@@ -189,7 +189,7 @@ const folderTree = Array.from(sortedRootFolders.values()).map(folder => folderTo
           <div class="folder-node" data-path={folder.path} data-has-children={folder.hasChildren}>
             <div
               class:list={[
-                "folder-row flex items-center gap-3 rounded-lg transition-colors group cursor-pointer select-none py-2",
+                "folder-row flex items-center gap-3 rounded-lg transition-colors group cursor-default select-none py-2",
                 folder.isActive
                   ? "bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] text-[var(--color-accent)] dark:text-[var(--color-accent)]"
                   : "text-[var(--color-text-body)] dark:text-[var(--color-text-muted)] hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)]"
@@ -215,7 +215,7 @@ const folderTree = Array.from(sortedRootFolders.values()).map(folder => folderTo
 
               <a
                 href={`/${folder.path}`}
-                class="folder-link flex-1 min-w-0 font-medium truncate capitalize text-inherit hover:text-inherit no-underline"
+                class="folder-link min-w-0 font-medium truncate capitalize text-inherit hover:text-inherit no-underline hover:underline cursor-pointer"
                 onclick="event.stopPropagation()"
               >
                 {folder.name.replace(/-/g, ' ')}
@@ -231,9 +231,9 @@ const folderTree = Array.from(sortedRootFolders.values()).map(folder => folderTo
                   <div class="folder-node" data-path={child.path} data-has-children={child.hasChildren}>
                     <div 
                       class:list={[
-                        "folder-row flex items-center gap-3 rounded-lg transition-colors group cursor-pointer select-none py-2",
-                        child.isActive 
-                          ? "bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] text-[var(--color-accent)] dark:text-[var(--color-accent)]" 
+                        "folder-row flex items-center gap-3 rounded-lg transition-colors group cursor-default select-none py-2",
+                        child.isActive
+                          ? "bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] text-[var(--color-accent)] dark:text-[var(--color-accent)]"
                           : "text-[var(--color-text-body)] dark:text-[var(--color-text-muted)] hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)]"
                       ]}
                       data-folder-path={child.path}
@@ -257,7 +257,7 @@ const folderTree = Array.from(sortedRootFolders.values()).map(folder => folderTo
                       
                       <a
                         href={`/${child.path}`}
-                        class="folder-link flex-1 min-w-0 font-medium truncate capitalize text-inherit hover:text-inherit no-underline"
+                        class="folder-link min-w-0 font-medium truncate capitalize text-inherit hover:text-inherit no-underline hover:underline cursor-pointer"
                         onclick="event.stopPropagation()"
                       >
                         {child.name.replace(/-/g, ' ')}
@@ -273,9 +273,9 @@ const folderTree = Array.from(sortedRootFolders.values()).map(folder => folderTo
                           <div class="folder-node" data-path={grandchild.path} data-has-children={grandchild.hasChildren}>
                             <div 
                               class:list={[
-                                "folder-row flex items-center gap-3 rounded-lg transition-colors group cursor-pointer select-none py-2",
-                                grandchild.isActive 
-                                  ? "bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] text-[var(--color-accent)] dark:text-[var(--color-accent)]" 
+                                "folder-row flex items-center gap-3 rounded-lg transition-colors group cursor-default select-none py-2",
+                                grandchild.isActive
+                                  ? "bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] text-[var(--color-accent)] dark:text-[var(--color-accent)]"
                                   : "text-[var(--color-text-body)] dark:text-[var(--color-text-muted)] hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)]"
                               ]}
                               data-folder-path={grandchild.path}
@@ -299,7 +299,7 @@ const folderTree = Array.from(sortedRootFolders.values()).map(folder => folderTo
                               
                               <a
                                 href={`/${grandchild.path}`}
-                                class="folder-link flex-1 min-w-0 font-medium truncate capitalize text-inherit hover:text-inherit no-underline"
+                                class="folder-link min-w-0 font-medium truncate capitalize text-inherit hover:text-inherit no-underline hover:underline cursor-pointer"
                                 onclick="event.stopPropagation()"
                               >
                                 {grandchild.name.replace(/-/g, ' ')}
