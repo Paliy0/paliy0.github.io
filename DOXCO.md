@@ -1,12 +1,13 @@
 ---
-title:
+title: LOL
 created_at: 2026-04-12
 tags:
   - docker
 status: planning
 version: 0.0.1
 updated_at: 2026-04-12
-share: "true"
+share: true
+category: test/project
 ---
 # Project Description
 <!-- Brief overview of what the project aims to accomplish -->
