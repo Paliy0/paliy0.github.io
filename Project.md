@@ -6,7 +6,7 @@ date: 2026-04-12
 tags:
   - tag1
   - tag2
-category: folder/subfolder
+category: test/notes
 draft: false
 created_at:
   "{ date }":
