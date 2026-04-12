@@ -45,7 +45,7 @@ function getExcerpt(note: CollectionEntry<'notes'>): string {
 }
 
 const excerpt = getExcerpt(note);
-const noteUrl = `/notes/${generateSlug(note)}`;
+const noteUrl = `/${generateSlug(note)}`;
 
 // Variant-specific classes
 const cardClasses = {

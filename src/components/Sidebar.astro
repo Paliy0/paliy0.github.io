@@ -68,12 +68,12 @@ function sortFolders(folders: Map<string, FolderNode>): Map<string, FolderNode> 
 
 const sortedRootFolders = sortFolders(rootFolders);
 
-const activeFolderPath = currentPath.startsWith('/notes/') 
-  ? currentPath.replace('/notes/', '') 
+const activeFolderPath = currentPath.length > 1
+  ? currentPath.replace(/^\//, '')
   : '';
 
-const activeNoteSlug = currentPath.startsWith('/notes/') 
-  ? currentPath.replace('/notes/', '') 
+const activeNoteSlug = currentPath.length > 1
+  ? currentPath.replace(/^\//, '')
   : '';
 
 function folderToArray(folder: FolderNode, level: number): any {
@@ -200,7 +200,7 @@ const folderTree = Array.from(sortedRootFolders.values()).map(folder => folderTo
               )}
 
               <a
-                href={`/notes/${folder.path}`}
+                href={`/${folder.path}`}
                 class="folder-link flex-1 min-w-0 font-medium truncate capitalize text-inherit hover:text-inherit no-underline"
                 onclick="event.stopPropagation()"
               >
@@ -242,7 +242,7 @@ const folderTree = Array.from(sortedRootFolders.values()).map(folder => folderTo
                       )}
                       
                       <a
-                        href={`/notes/${child.path}`}
+                        href={`/${child.path}`}
                         class="folder-link flex-1 min-w-0 font-medium truncate capitalize text-inherit hover:text-inherit no-underline"
                         onclick="event.stopPropagation()"
                       >
@@ -284,7 +284,7 @@ const folderTree = Array.from(sortedRootFolders.values()).map(folder => folderTo
                               )}
                               
                               <a
-                                href={`/notes/${grandchild.path}`}
+                                href={`/${grandchild.path}`}
                                 class="folder-link flex-1 min-w-0 font-medium truncate capitalize text-inherit hover:text-inherit no-underline"
                                 onclick="event.stopPropagation()"
                               >
@@ -296,7 +296,7 @@ const folderTree = Array.from(sortedRootFolders.values()).map(folder => folderTo
                               <div class="folder-children" data-parent-path={grandchild.path}>
                                 {grandchild.notes.map((note: any) => (
                                   <a
-                                    href={`/notes/${note.slug}`}
+                                    href={`/${note.slug}`}
                                     class:list={[
                                       "sidebar-note-link flex items-center gap-3 rounded-lg transition-colors py-2 pl-4 pr-3 no-underline hover:no-underline",
                                       activeNoteSlug === note.slug
@@ -320,7 +320,7 @@ const folderTree = Array.from(sortedRootFolders.values()).map(folder => folderTo
                           <div class="folder-children" data-parent-path={child.path}>
                             {child.notes.map((note: any) => (
                               <a
-                                href={`/notes/${note.slug}`}
+                                href={`/${note.slug}`}
                                 class:list={[
                                   "sidebar-note-link flex items-center gap-3 rounded-lg transition-colors py-2 pl-4 pr-3 no-underline hover:no-underline",
                                   activeNoteSlug === note.slug
@@ -346,7 +346,7 @@ const folderTree = Array.from(sortedRootFolders.values()).map(folder => folderTo
                   <div class="folder-children" data-parent-path={folder.path}>
                     {folder.notes.map((note: any) => (
                       <a
-                        href={`/notes/${note.slug}`}
+                        href={`/${note.slug}`}
                         class:list={[
                           "sidebar-note-link flex items-center gap-3 rounded-lg transition-colors py-2 pl-4 pr-3 no-underline hover:no-underline",
                           activeNoteSlug === note.slug

@@ -1,7 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
-import Layout from '../../layouts/Layout.astro';
-import NoteCard from '../../components/NoteCard.astro';
+import Layout from '../layouts/Layout.astro';
+import NoteCard from '../components/NoteCard.astro';
 
 const allNotes = await getCollection('notes', ({ data }) => {
   return data.draft !== true;

@@ -1,12 +1,14 @@
 ---
 import { getCollection } from 'astro:content';
-import Layout from '../../../layouts/Layout.astro';
-import NoteCard from '../../../components/NoteCard.astro';
-import Breadcrumbs, { generateFolderBreadcrumbs } from '../../../components/Breadcrumbs.astro';
+import Layout from '../../layouts/Layout.astro';
+import NoteCard from '../../components/NoteCard.astro';
+import Breadcrumbs, { generateFolderBreadcrumbs } from '../../components/Breadcrumbs.astro';
+
+const RESERVED_ROUTES = new Set(['tags', 'notes', '404']);
 
 export async function getStaticPaths() {
   const notes = await getCollection('notes', ({ data }) => !data.draft);
-  
+
   // Get all unique folder paths
   const folders = new Set<string>();
   notes.forEach((note) => {
@@ -21,11 +23,13 @@ export async function getStaticPaths() {
       }
     }
   });
-  
-  return Array.from(folders).map((folder) => ({
-    params: { folder },
-    props: { folder },
-  }));
+
+  return Array.from(folders)
+    .filter((folder) => !RESERVED_ROUTES.has(folder.split('/')[0]))
+    .map((folder) => ({
+      params: { folder },
+      props: { folder },
+    }));
 }
 
 const { folder } = Astro.props;
@@ -43,7 +47,7 @@ allNotes.forEach((note) => {
   const parts = note.id.split('/');
   parts.pop(); // Remove filename
   const noteFolder = parts.join('/');
-  
+
   // Check if this note is in a subfolder of current folder
   if (noteFolder.startsWith(folder + '/')) {
     const remainingPath = noteFolder.slice(folder.length + 1);
@@ -97,8 +101,8 @@ const breadcrumbs = generateFolderBreadcrumbs(folder);
         <h2 class="text-lg font-semibold text-[var(--color-text-heading)] dark:text-[var(--color-text-heading)] mb-4">Subfolders</h2>
         <div class="grid gap-3 sm:grid-cols-2">
           {sortedSubfolders.map((subfolder) => (
-            <a 
-              href={`/notes/${folder}/${subfolder}`}
+            <a
+              href={`/${folder}/${subfolder}`}
               class="flex items-center gap-3 p-4 bg-[var(--color-surface-elevated)] dark:bg-[var(--color-surface-floating)] rounded-lg hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)] transition-colors group"
             >
               <svg class="w-6 h-6 text-[var(--color-accent)]" viewBox="0 0 20 20" fill="currentColor">

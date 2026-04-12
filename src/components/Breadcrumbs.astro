@@ -31,7 +31,7 @@ export function generateNoteBreadcrumbs(
       currentPath = currentPath ? `${currentPath}/${pathParts[i]}` : pathParts[i];
       breadcrumbs.push({
         label: pathParts[i].replace(/-/g, ' '),
-        href: `/notes/${currentPath}`,
+        href: `/${currentPath}`,
       });
     }
   }
@@ -65,11 +65,11 @@ export function generateFolderBreadcrumbs(folder: string): BreadcrumbItem[] {
     } else {
       breadcrumbs.push({
         label: parts[i].replace(/-/g, ' '),
-        href: `/notes/${currentPath}`,
+        href: `/${currentPath}`,
       });
     }
   }
-  
+
   return breadcrumbs;
 }
 ---

@@ -1,14 +1,16 @@
 ---
 import { getCollection, render } from 'astro:content';
-import Note from '../../layouts/Note.astro';
+import Note from '../layouts/Note.astro';
 
 export async function getStaticPaths() {
   const notes = await getCollection('notes');
-  
-  return notes.map((note) => ({
-    params: { slug: note.id.replace(/\.md$/, '') },
-    props: { note },
-  }));
+
+  return notes
+    .filter((note) => note.id !== 'index.md')
+    .map((note) => ({
+      params: { slug: note.id.replace(/\.md$/, '') },
+      props: { note },
+    }));
 }
 
 const { note } = Astro.props;

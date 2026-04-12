@@ -68,7 +68,7 @@ export function replaceWikiLinks(content: string, allNotes: Note[]): string {
       // Replace with internal link
       processedContent = processedContent.replace(
         link.raw,
-        `[${link.displayText}](/notes/${link.slug})`
+        `[${link.displayText}](/${link.slug})`
       );
     } else {
       // Replace with 404 link

@@ -149,7 +149,7 @@ const searchIndex = notes.map(note => ({
             : note.content.slice(0, 150) + '...');
       
       return `
-        <a href="/notes/${note.slug}" class="block p-4 hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)] transition-colors border-b border-[var(--color-border-subtle)] dark:border-[var(--color-border-subtle)] last:border-0">
+        <a href="/${note.slug}" class="block p-4 hover:bg-[var(--color-surface-elevated)] dark:hover:bg-[var(--color-surface-floating)] transition-colors border-b border-[var(--color-border-subtle)] dark:border-[var(--color-border-subtle)] last:border-0">
           <h3 class="font-semibold text-[var(--color-text-heading)] dark:text-[var(--color-text-body)] mb-1" style="view-transition-name: ${note.transitionName}">${title}</h3>
           <p class="text-sm text-[var(--color-text-body)] dark:text-[var(--color-text-muted)] line-clamp-2">${description}</p>
           ${note.tags.length > 0 ? `

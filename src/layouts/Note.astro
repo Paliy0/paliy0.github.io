@@ -81,7 +81,7 @@ const breadcrumbs = generateNoteBreadcrumbs(note);
 						{backlinks.map((backlink) => (
 							<li>
 								<a 
-									href={`/notes/${generateSlug(backlink)}`}
+									href={`/${generateSlug(backlink)}`}
 									transition:name={slugifyStr(backlink.data.title)}
 									class="text-[var(--color-accent)] dark:text-[var(--color-accent)] hover:text-[var(--color-accent-coral)] dark:hover:text-[var(--color-accent-coral-light)] transition-colors"
 								>
